@@ -90,7 +90,6 @@ import BranchDetailsScreen from '../screens/admin/BranchDetailsScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import ProfileScreen from '../screens/settings/ProfileScreen';
 import EditProfileScreen from '../screens/settings/EditProfileScreen';
-import ChangePasswordScreen from '../screens/settings/ChangePasswordScreen';
 
 export type MainTabParamList = {
   Dashboard: undefined;

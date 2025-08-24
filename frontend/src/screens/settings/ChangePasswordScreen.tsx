@@ -241,4 +241,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default EditProfileScreen;
+export default ChangePasswordScreen;
