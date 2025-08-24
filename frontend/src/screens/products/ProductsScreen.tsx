@@ -14,6 +14,7 @@ import {
   Menu,
   Button,
   IconButton,
+  List,
 } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -48,6 +49,7 @@ const ProductsScreen: React.FC<Props> = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [sortMenuVisible, setSortMenuVisible] = useState(false);
   const [categoryMenuVisible, setCategoryMenuVisible] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
 
   useEffect(() => {
     dispatch(fetchProducts());
@@ -69,6 +71,22 @@ const ProductsScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleAddProduct = () => {
     navigation.navigate('AddEditProduct', {});
+    setShowQuickActions(false);
+  };
+
+  const handleStockTaking = () => {
+    navigation.navigate('StockTaking');
+    setShowQuickActions(false);
+  };
+
+  const handleCategories = () => {
+    navigation.navigate('Categories');
+    setShowQuickActions(false);
+  };
+
+  const handleStockAdjustments = () => {
+    navigation.navigate('StockAdjustments');
+    setShowQuickActions(false);
   };
 
   const handleSort = (field: 'name' | 'price' | 'stock' | 'date') => {
@@ -169,6 +187,38 @@ const ProductsScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
+  const renderQuickActions = () => (
+    <Card style={[styles.quickActionsCard, { backgroundColor: theme.colors.surface }]}>
+      <Card.Title title="Product Management" />
+      <Card.Content>
+        <List.Item
+          title="New Product"
+          description="Add a new product to inventory"
+          left={props => <List.Icon {...props} icon="plus" />}
+          onPress={handleAddProduct}
+        />
+        <List.Item
+          title="Stock Taking"
+          description="Perform stock count and reconciliation"
+          left={props => <List.Icon {...props} icon="clipboard-list" />}
+          onPress={handleStockTaking}
+        />
+        <List.Item
+          title="Categories"
+          description="Manage product categories"
+          left={props => <List.Icon {...props} icon="folder" />}
+          onPress={handleCategories}
+        />
+        <List.Item
+          title="Stock Adjustments"
+          description="View and manage stock adjustments"
+          left={props => <List.Icon {...props} icon="tune" />}
+          onPress={handleStockAdjustments}
+        />
+      </Card.Content>
+    </Card>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Search and Filters */}
@@ -240,7 +290,19 @@ const ProductsScreen: React.FC<Props> = ({ navigation }) => {
             />
           </Menu>
         </View>
+
+        <Button
+          mode="outlined"
+          icon="menu"
+          onPress={() => setShowQuickActions(!showQuickActions)}
+          style={styles.quickActionsButton}
+        >
+          Quick Actions
+        </Button>
       </View>
+
+      {/* Quick Actions */}
+      {showQuickActions && renderQuickActions()}
 
       {/* Products List */}
       <FlatList
@@ -287,9 +349,19 @@ const styles = StyleSheet.create({
   filtersContainer: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 8,
   },
   filterButton: {
     flex: 1,
+  },
+  quickActionsButton: {
+    marginTop: 8,
+  },
+  quickActionsCard: {
+    margin: 16,
+    marginTop: 0,
+    elevation: 2,
+    borderRadius: 12,
   },
   listContainer: {
     padding: 16,

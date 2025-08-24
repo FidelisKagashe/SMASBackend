@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import {
   Text,
@@ -11,9 +12,12 @@ import {
   Button,
   Chip,
   FAB,
+  Menu,
+  Divider,
 } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { useTheme } from '../../hooks/useTheme';
@@ -21,6 +25,9 @@ import { fetchProducts } from '../../store/slices/productsSlice';
 import { fetchSales } from '../../store/slices/salesSlice';
 import { fetchCustomers } from '../../store/slices/customersSlice';
 import { syncData, getSyncStatus } from '../../store/slices/syncSlice';
+import { DashboardMetrics } from '../../types';
+
+const screenWidth = Dimensions.get('window').width;
 
 const DashboardScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -34,10 +41,14 @@ const DashboardScreen: React.FC = () => {
   const { isOnline, isSyncing, pendingChanges, lastSync } = useAppSelector(state => state.sync);
 
   const [refreshing, setRefreshing] = React.useState(false);
+  const [selectedChart, setSelectedChart] = React.useState<'sales' | 'expenses' | 'revenue' | 'customers'>('sales');
+  const [chartMenuVisible, setChartMenuVisible] = React.useState(false);
+  const [dashboardMetrics, setDashboardMetrics] = React.useState<DashboardMetrics | null>(null);
 
   useEffect(() => {
     loadDashboardData();
     dispatch(getSyncStatus());
+    loadDashboardMetrics();
   }, [dispatch]);
 
   const loadDashboardData = async () => {
@@ -52,9 +63,69 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
+  const loadDashboardMetrics = async () => {
+    // This would typically fetch from API
+    // For now, we'll calculate from existing data
+    const today = new Date().toDateString();
+    const thisWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const thisMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    
+    const todaySales = sales.filter(sale => {
+      const saleDate = new Date(sale.createdAt).toDateString();
+      return saleDate === today && sale.status === 'completed';
+    });
+    
+    const weekSales = sales.filter(sale => {
+      const saleDate = new Date(sale.createdAt);
+      return saleDate >= thisWeek && sale.status === 'completed';
+    });
+    
+    const monthSales = sales.filter(sale => {
+      const saleDate = new Date(sale.createdAt);
+      return saleDate >= thisMonth && sale.status === 'completed';
+    });
+    
+    const metrics: DashboardMetrics = {
+      sales: {
+        today: todaySales.reduce((sum, sale) => sum + sale.total, 0),
+        thisWeek: weekSales.reduce((sum, sale) => sum + sale.total, 0),
+        thisMonth: monthSales.reduce((sum, sale) => sum + sale.total, 0),
+        growth: 15.5, // This would be calculated from historical data
+      },
+      debtors: {
+        total: 25000, // This would come from debt records
+        overdue: 5000,
+        count: 12,
+      },
+      expenses: {
+        today: 2500, // This would come from expense records
+        thisMonth: 45000,
+        budget: 50000,
+      },
+      creditors: {
+        total: 18000, // This would come from supplier balances
+        overdue: 3000,
+        count: 8,
+      },
+      services: {
+        completed: 25, // This would come from service records
+        pending: 8,
+        revenue: 12000,
+      },
+      payments: {
+        received: 35000, // This would come from payment records
+        paid: 28000,
+        pending: 7000,
+      },
+    };
+    
+    setDashboardMetrics(metrics);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadDashboardData();
+    await loadDashboardMetrics();
     if (isOnline) {
       await dispatch(syncData());
     }
@@ -67,17 +138,6 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
-  // Calculate dashboard metrics
-  const todaySales = sales.filter(sale => {
-    const today = new Date().toDateString();
-    const saleDate = new Date(sale.createdAt).toDateString();
-    return saleDate === today && sale.status === 'completed';
-  });
-
-  const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
-  const lowStockProducts = products.filter(product => product.stock < 10);
-  const recentSales = sales.slice(0, 5);
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -88,6 +148,81 @@ const DashboardScreen: React.FC = () => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
+
+  const getChartData = () => {
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    
+    switch (selectedChart) {
+      case 'sales':
+        return {
+          labels,
+          datasets: [{
+            data: [2000, 4500, 2800, 8000, 9900, 4300, 6700],
+            color: (opacity = 1) => `rgba(49, 130, 206, ${opacity})`,
+            strokeWidth: 2,
+          }],
+        };
+      case 'expenses':
+        return {
+          labels,
+          datasets: [{
+            data: [1200, 1900, 3000, 5000, 2000, 3000, 2500],
+            color: (opacity = 1) => `rgba(245, 101, 101, ${opacity})`,
+            strokeWidth: 2,
+          }],
+        };
+      case 'revenue':
+        return {
+          labels,
+          datasets: [{
+            data: [800, 2600, -200, 3000, 7900, 1300, 4200],
+            color: (opacity = 1) => `rgba(56, 161, 105, ${opacity})`,
+            strokeWidth: 2,
+          }],
+        };
+      case 'customers':
+        return {
+          labels,
+          datasets: [{
+            data: [12, 19, 15, 25, 22, 18, 24],
+            color: (opacity = 1) => `rgba(128, 90, 213, ${opacity})`,
+            strokeWidth: 2,
+          }],
+        };
+      default:
+        return { labels: [], datasets: [] };
+    }
+  };
+
+  const chartConfig = {
+    backgroundColor: theme.colors.surface,
+    backgroundGradientFrom: theme.colors.surface,
+    backgroundGradientTo: theme.colors.surface,
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(49, 130, 206, ${opacity})`,
+    labelColor: (opacity = 1) => theme.colors.text,
+    style: {
+      borderRadius: 16,
+    },
+    propsForDots: {
+      r: '6',
+      strokeWidth: '2',
+      stroke: theme.colors.primary,
+    },
+  };
+
+  if (!dashboardMetrics) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <Text>Loading dashboard...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const lowStockProducts = products.filter(product => product.stock < 10);
+  const recentSales = sales.slice(0, 5);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -136,7 +271,7 @@ const DashboardScreen: React.FC = () => {
               <MaterialIcons name="attach-money" size={32} color={theme.colors.success} />
               <View style={styles.metricText}>
                 <Text style={[styles.metricValue, { color: theme.colors.text }]}>
-                  {formatCurrency(todayRevenue)}
+                  {formatCurrency(dashboardMetrics.sales.today)}
                 </Text>
                 <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>
                   {t('dashboard.todaySales')}
@@ -145,6 +280,117 @@ const DashboardScreen: React.FC = () => {
             </Card.Content>
           </Card>
 
+          <Card style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
+            <Card.Content style={styles.metricContent}>
+              <MaterialIcons name="account-balance-wallet" size={32} color={theme.colors.warning} />
+              <View style={styles.metricText}>
+                <Text style={[styles.metricValue, { color: theme.colors.text }]}>
+                  {formatCurrency(dashboardMetrics.debtors.total)}
+                </Text>
+                <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>
+                  Debtors ({dashboardMetrics.debtors.count})
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          <Card style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
+            <Card.Content style={styles.metricContent}>
+              <MaterialIcons name="trending-down" size={32} color={theme.colors.error} />
+              <View style={styles.metricText}>
+                <Text style={[styles.metricValue, { color: theme.colors.text }]}>
+                  {formatCurrency(dashboardMetrics.expenses.today)}
+                </Text>
+                <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>
+                  Today's Expenses
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          <Card style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
+            <Card.Content style={styles.metricContent}>
+              <MaterialIcons name="payment" size={32} color={theme.colors.info} />
+              <View style={styles.metricText}>
+                <Text style={[styles.metricValue, { color: theme.colors.text }]}>
+                  {formatCurrency(dashboardMetrics.creditors.total)}
+                </Text>
+                <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>
+                  Creditors ({dashboardMetrics.creditors.count})
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          <Card style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
+            <Card.Content style={styles.metricContent}>
+              <MaterialIcons name="build" size={32} color={theme.colors.secondary} />
+              <View style={styles.metricText}>
+                <Text style={[styles.metricValue, { color: theme.colors.text }]}>
+                  {dashboardMetrics.services.completed}
+                </Text>
+                <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>
+                  Services Completed
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          <Card style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
+            <Card.Content style={styles.metricContent}>
+              <MaterialIcons name="account-balance" size={32} color={theme.colors.primary} />
+              <View style={styles.metricText}>
+                <Text style={[styles.metricValue, { color: theme.colors.text }]}>
+                  {formatCurrency(dashboardMetrics.payments.received)}
+                </Text>
+                <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>
+                  Payments Received
+                </Text>
+              </View>
+            </Card.Content>
+          </Card>
+        </View>
+
+        {/* Chart Section */}
+        <Card style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
+          <Card.Title 
+            title="Analytics Chart"
+            right={() => (
+              <Menu
+                visible={chartMenuVisible}
+                onDismiss={() => setChartMenuVisible(false)}
+                anchor={
+                  <Button
+                    mode="outlined"
+                    onPress={() => setChartMenuVisible(true)}
+                    icon="chart-line"
+                    style={styles.chartMenuButton}
+                  >
+                    {selectedChart.charAt(0).toUpperCase() + selectedChart.slice(1)}
+                  </Button>
+                }
+              >
+                <Menu.Item onPress={() => { setSelectedChart('sales'); setChartMenuVisible(false); }} title="Sales" />
+                <Menu.Item onPress={() => { setSelectedChart('expenses'); setChartMenuVisible(false); }} title="Expenses" />
+                <Menu.Item onPress={() => { setSelectedChart('revenue'); setChartMenuVisible(false); }} title="Revenue" />
+                <Menu.Item onPress={() => { setSelectedChart('customers'); setChartMenuVisible(false); }} title="Customers" />
+              </Menu>
+            )}
+          />
+          <Card.Content>
+            <LineChart
+              data={getChartData()}
+              width={screenWidth - 60}
+              height={220}
+              chartConfig={chartConfig}
+              bezier
+              style={styles.chart}
+            />
+          </Card.Content>
+        </Card>
+
+        {/* Metrics Overview Cards */}
+        <View style={styles.metricsContainer}>
           <Card style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
             <Card.Content style={styles.metricContent}>
               <MaterialIcons name="inventory" size={32} color={theme.colors.primary} />
@@ -168,20 +414,6 @@ const DashboardScreen: React.FC = () => {
                 </Text>
                 <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>
                   {t('dashboard.totalCustomers')}
-                </Text>
-              </View>
-            </Card.Content>
-          </Card>
-
-          <Card style={[styles.metricCard, { backgroundColor: theme.colors.surface }]}>
-            <Card.Content style={styles.metricContent}>
-              <MaterialIcons name="warning" size={32} color={theme.colors.warning} />
-              <View style={styles.metricText}>
-                <Text style={[styles.metricValue, { color: theme.colors.text }]}>
-                  {lowStockProducts.length}
-                </Text>
-                <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>
-                  {t('dashboard.lowStock')}
                 </Text>
               </View>
             </Card.Content>
@@ -216,6 +448,30 @@ const DashboardScreen: React.FC = () => {
                 onPress={() => {}}
               >
                 {t('dashboard.addCustomer')}
+              </Button>
+              <Button
+                mode="outlined"
+                icon="plus"
+                style={styles.actionButton}
+                onPress={() => {}}
+              >
+                New Expense
+              </Button>
+              <Button
+                mode="outlined"
+                icon="plus"
+                style={styles.actionButton}
+                onPress={() => {}}
+              >
+                New Purchase
+              </Button>
+              <Button
+                mode="outlined"
+                icon="analytics"
+                style={styles.actionButton}
+                onPress={() => {}}
+              >
+                View Reports
               </Button>
             </View>
           </Card.Content>
@@ -300,6 +556,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: {
     flex: 1,
   },
@@ -352,6 +613,13 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderRadius: 12,
   },
+  chartMenuButton: {
+    marginRight: 16,
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+  },
   quickActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -359,7 +627,8 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    minWidth: '30%',
+    minWidth: '45%',
+    marginBottom: 8,
   },
   saleItem: {
     flexDirection: 'row',
