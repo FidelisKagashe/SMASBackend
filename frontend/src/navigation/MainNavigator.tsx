@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useAppSelector } from '../hooks/redux';
 import { useTheme } from '../hooks/useTheme';
 import { UserRole } from '../types';
 
