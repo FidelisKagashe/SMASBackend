@@ -21,6 +21,7 @@ export interface UserPreferences {
   theme: 'light' | 'dark';
   language: 'en' | 'sw';
   primaryColor: string;
+  colorScheme: keyof typeof import('../constants/colors').ColorCombinations | 'custom';
   biometricEnabled: boolean;
   defaultBranch?: string;
   notifications: boolean;

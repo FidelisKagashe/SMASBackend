@@ -12,6 +12,7 @@ const initialState: SettingsState = {
     theme: 'light',
     language: 'en',
     primaryColor: '#3182CE',
+    colorScheme: 'ocean',
     biometricEnabled: false,
   },
   isLoading: false,
