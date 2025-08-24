@@ -4,6 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
+import { UserRole } from '../types';
 
 // Screens
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
